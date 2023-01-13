@@ -1,0 +1,10 @@
+<ul>
+<%= if @current_player do %>
+  <li><%= @current_player.email %></li>
+  <li><%= link "Settings", to: Routes.player_settings_path(@conn, :edit) %></li>
+  <li><%= link "Log out", to: Routes.player_session_path(@conn, :delete), method: :delete %></li>
+<% else %>
+  <li><%= link "Register", to: Routes.player_registration_path(@conn, :new) %></li>
+  <li><%= link "Log in", to: Routes.player_session_path(@conn, :new) %></li>
+<% end %>
+</ul>
