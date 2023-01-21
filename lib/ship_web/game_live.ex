@@ -1,6 +1,7 @@
 defmodule ShipWeb.GameLive do
   use ShipWeb, :live_view
 
+  alias Ship.Components.HullPoints
   alias Ship.Components.XPosition
   alias Ship.Components.YPosition
 
@@ -11,8 +12,7 @@ defmodule ShipWeb.GameLive do
     # We must spawn the ship before processing any other input
     ECSx.ClientEvents.add(to_string(player.id), :spawn_ship)
 
-    # We want to keep up-to-date on our ship's location
-    :timer.send_interval(50, :refresh_current_location)
+    :timer.send_after(50, :first_load)
 
     # Keeping a set of currently held keys will allow us to prevent duplicate keydown events
     keys = MapSet.new()
@@ -21,8 +21,63 @@ defmodule ShipWeb.GameLive do
      assign(socket,
        player: %{player | id: to_string(player.id)},
        keys: keys,
-       current_location: nil
+       x_coord: nil,
+       y_coord: nil,
+       current_hp: nil,
+       other_ships: [],
+       ui_scale: 15,
+       loading: true
      )}
+  end
+
+  def handle_info(:first_load, socket) do
+    player_entity = socket.assigns.player.id
+    x = wait_for_spawn(XPosition, player_entity)
+    y = wait_for_spawn(YPosition, player_entity)
+    hp = wait_for_spawn(HullPoints, player_entity)
+
+    other_ships = Enum.reject(all_ships(), fn {entity, _x, _y} -> entity == player_entity end)
+
+    # We want to keep up-to-date on this info
+    :timer.send_interval(50, :refresh)
+
+    {:noreply,
+     assign(socket,
+       other_ships: other_ships,
+       x_coord: x,
+       y_coord: y,
+       current_hp: hp,
+       loading: false
+     )}
+  end
+
+  def handle_info(:refresh, socket) do
+    player_entity = socket.assigns.player.id
+    x = XPosition.get_one(player_entity)
+    y = YPosition.get_one(player_entity)
+    hp = HullPoints.get_one(player_entity)
+
+    other_ships = Enum.reject(all_ships(), fn {entity, _x, _y} -> entity == player_entity end)
+
+    {:noreply, assign(socket, other_ships: other_ships, current_hp: hp, x_coord: x, y_coord: y)}
+  end
+
+  defp wait_for_spawn(component_type, player_id) do
+    case component_type.get_one(player_id) do
+      nil ->
+        Process.sleep(10)
+        wait_for_spawn(component_type, player_id)
+
+      value ->
+        value
+    end
+  end
+
+  defp all_ships do
+    xs = XPosition.get_all() |> Enum.sort()
+    ys = YPosition.get_all() |> Enum.sort()
+
+    Enum.zip_with(xs, ys, fn {entity, x}, {entity, y} -> {entity, x, y} end)
   end
 
   def handle_event("keydown", %{"key" => key}, socket) do
@@ -30,41 +85,66 @@ defmodule ShipWeb.GameLive do
       # Already holding this key - do nothing
       {:noreply, socket}
     else
-      ECSx.ClientEvents.add(socket.assigns.player.id, keydown(key))
+      maybe_add_client_event(socket.assigns.player.id, key, &keydown/1)
+
       {:noreply, assign(socket, keys: MapSet.put(socket.assigns.keys, key))}
     end
   end
 
   def handle_event("keyup", %{"key" => key}, socket) do
     # We don't have to worry about duplicate keyup events
-    ECSx.ClientEvents.add(socket.assigns.player.id, keyup(key))
+    maybe_add_client_event(socket.assigns.player.id, key, &keyup/1)
+
     {:noreply, assign(socket, keys: MapSet.delete(socket.assigns.keys, key))}
+  end
+
+  defp maybe_add_client_event(player_id, key, fun) do
+    case fun.(key) do
+      :noop -> :ok
+      event -> ECSx.ClientEvents.add(player_id, event)
+    end
   end
 
   defp keydown(key) when key in ~w(w W ArrowUp), do: {:move, :north}
   defp keydown(key) when key in ~w(a A ArrowLeft), do: {:move, :west}
   defp keydown(key) when key in ~w(s S ArrowDown), do: {:move, :south}
   defp keydown(key) when key in ~w(d D ArrowRight), do: {:move, :east}
+  defp keydown(_key), do: :noop
 
   defp keyup(key) when key in ~w(w W ArrowUp), do: {:stop_move, :north}
   defp keyup(key) when key in ~w(a A ArrowLeft), do: {:stop_move, :west}
   defp keyup(key) when key in ~w(s S ArrowDown), do: {:stop_move, :south}
   defp keyup(key) when key in ~w(d D ArrowRight), do: {:stop_move, :east}
-
-  def handle_info(:refresh_current_location, socket) do
-    player_entity = socket.assigns.player.id
-    x = XPosition.get_one(player_entity)
-    y = YPosition.get_one(player_entity)
-
-    {:noreply, assign(socket, current_location: {x, y})}
-  end
+  defp keyup(_key), do: :noop
 
   def render(assigns) do
     ~H"""
     <div id="game" phx-window-keydown="keydown" phx-window-keyup="keyup">
-      <p>Player ID: <%= @player.id %></p>
-      <p>Player Coords: <%= inspect(@current_location) %></p>
+      <p>Hull Points: <%= @current_hp %></p>
     </div>
+
+    <%= if @loading do %>
+      <p> Loading....</p>
+      <p> Please wait</p>
+    <% else %>
+      <svg height={60 * @ui_scale} width={100 * @ui_scale}>
+        <rect width="100%" height="100%" fill="#72eff8" />
+        <image
+          x={@x_coord * @ui_scale}
+          y={@y_coord * @ui_scale}
+          width={@ui_scale} height={@ui_scale}
+          href={Routes.static_path(@socket, "/images/battleship.svg")}
+        />
+        <%= for {_entity, x, y} <- @other_ships do %>
+          <image
+            x={x * @ui_scale}
+            y={y * @ui_scale}
+            width={@ui_scale} height={@ui_scale}
+            href={Routes.static_path(@socket, "/images/ship.svg")}
+          />
+        <% end %>
+      </svg>
+    <% end %>
     """
   end
 end

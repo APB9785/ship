@@ -15,7 +15,6 @@ defmodule Ship.Application do
       # Start the PubSub system
       {Phoenix.PubSub, name: Ship.PubSub},
       Ship.Manager,
-      ECSx.ClientEvents,
       # Start the Endpoint (http/https)
       ShipWeb.Endpoint
       # Start a worker by calling: Ship.Worker.start_link(arg)

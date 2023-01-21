@@ -30,8 +30,9 @@ defmodule Ship.Systems.ClientEventHandler do
     YPosition.add(player, Enum.random(1..100))
   end
 
-  defp process_one({player, {:move, :north}}), do: YVelocity.add(player, 1)
-  defp process_one({player, {:move, :south}}), do: YVelocity.add(player, -1)
+  # Note Y movement will use screen position (increasing Y goes south)
+  defp process_one({player, {:move, :north}}), do: YVelocity.add(player, -1)
+  defp process_one({player, {:move, :south}}), do: YVelocity.add(player, 1)
   defp process_one({player, {:move, :east}}), do: XVelocity.add(player, 1)
   defp process_one({player, {:move, :west}}), do: XVelocity.add(player, -1)
 
