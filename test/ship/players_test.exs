@@ -38,7 +38,7 @@ defmodule Ship.PlayersTest do
   describe "get_player!/1" do
     test "raises if id is invalid" do
       assert_raise Ecto.NoResultsError, fn ->
-        Players.get_player!(-1)
+        Players.get_player!("11111111-1111-1111-1111-111111111111")
       end
     end
 

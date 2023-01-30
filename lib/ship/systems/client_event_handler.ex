@@ -7,6 +7,7 @@ defmodule Ship.Systems.ClientEventHandler do
   alias Ship.Components.AttackRange
   alias Ship.Components.AttackSpeed
   alias Ship.Components.HullPoints
+  alias Ship.Components.PlayerSpawned
   alias Ship.Components.SeekingTarget
   alias Ship.Components.XPosition
   alias Ship.Components.XVelocity
@@ -28,6 +29,7 @@ defmodule Ship.Systems.ClientEventHandler do
     SeekingTarget.add(player)
     XPosition.add(player, Enum.random(1..100))
     YPosition.add(player, Enum.random(1..100))
+    PlayerSpawned.add(player)
   end
 
   # Note Y movement will use screen position (increasing Y goes south)
@@ -36,9 +38,8 @@ defmodule Ship.Systems.ClientEventHandler do
   defp process_one({player, {:move, :east}}), do: XVelocity.add(player, 1)
   defp process_one({player, {:move, :west}}), do: XVelocity.add(player, -1)
 
-  defp process_one({player, {:stop_move, direction}}) when direction in [:north, :south],
-    do: YVelocity.remove(player)
-
-  defp process_one({player, {:stop_move, direction}}) when direction in [:east, :west],
-    do: XVelocity.remove(player)
+  defp process_one({player, {:stop_move, :north}}), do: YVelocity.remove_one(player, -1)
+  defp process_one({player, {:stop_move, :south}}), do: YVelocity.remove_one(player, 1)
+  defp process_one({player, {:stop_move, :east}}), do: XVelocity.remove_one(player, 1)
+  defp process_one({player, {:stop_move, :west}}), do: XVelocity.remove_one(player, -1)
 end
