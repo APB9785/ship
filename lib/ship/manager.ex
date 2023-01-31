@@ -17,9 +17,7 @@ defmodule Ship.Manager do
       Ship.Components.HullPoints.add(entity, 50)
       Ship.Components.SeekingTarget.add(entity)
       Ship.Components.XPosition.add(entity, Enum.random(1..100))
-      Ship.Components.XVelocity.add(entity, 0)
       Ship.Components.YPosition.add(entity, Enum.random(1..100))
-      Ship.Components.YVelocity.add(entity, 0)
     end
   end
 

@@ -172,7 +172,7 @@ defmodule ShipWeb.GameLive do
             y={@y_coord}
             width="1"
             height="1"
-            href={Routes.static_path(@socket, "/images/battleship.svg")}
+            href={Routes.static_path(@socket, "/images/player_ship.svg")}
           />
           <%= for {_entity, x, y} <- @other_ships do %>
             <image
@@ -180,7 +180,7 @@ defmodule ShipWeb.GameLive do
               y={y}
               width="1"
               height="1"
-              href={Routes.static_path(@socket, "/images/ship.svg")}
+              href={Routes.static_path(@socket, "/images/other_ship.svg")}
             />
           <% end %>
           <text x={@x_offset} y={@y_offset + 1} style="font: 1px serif">
