@@ -32,3 +32,5 @@ ship-*.tar
 npm-debug.log
 /assets/node_modules/
 
+# ElixirLS
+/.elixir_ls/
