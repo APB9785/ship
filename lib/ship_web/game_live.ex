@@ -2,6 +2,8 @@ defmodule ShipWeb.GameLive do
   use ShipWeb, :live_view
 
   alias Ship.Components.HullPoints
+  alias Ship.Components.ImageFile
+  alias Ship.Components.IsProjectile
   alias Ship.Components.PlayerSpawned
   alias Ship.Components.XPosition
   alias Ship.Components.YPosition
@@ -32,7 +34,9 @@ defmodule ShipWeb.GameLive do
       x_coord: nil,
       y_coord: nil,
       current_hp: nil,
+      player_ship_image_file: nil,
       other_ships: [],
+      projectiles: [],
       x_offset: 0,
       y_offset: 0,
       loading: true
@@ -47,6 +51,7 @@ defmodule ShipWeb.GameLive do
       socket
       |> assign_player_ship()
       |> assign_other_ships()
+      |> assign_projectiles()
       |> assign_offsets()
       |> assign(loading: false)
 
@@ -61,6 +66,7 @@ defmodule ShipWeb.GameLive do
       socket
       |> assign_player_ship()
       |> assign_other_ships()
+      |> assign_projectiles()
       |> assign_offsets()
 
     {:noreply, socket}
@@ -79,22 +85,37 @@ defmodule ShipWeb.GameLive do
     x = XPosition.get_one(socket.assigns.player_entity)
     y = YPosition.get_one(socket.assigns.player_entity)
     hp = HullPoints.get_one(socket.assigns.player_entity)
+    image = ImageFile.get_one(socket.assigns.player_entity)
 
-    assign(socket, x_coord: x, y_coord: y, current_hp: hp)
+    assign(socket, x_coord: x, y_coord: y, current_hp: hp, player_ship_image_file: image)
   end
 
   defp assign_other_ships(socket) do
     other_ships =
-      Enum.reject(all_ships(), fn {entity, _x, _y} -> entity == socket.assigns.player_entity end)
+      Enum.reject(all_ships(), fn {entity, _, _, _} -> entity == socket.assigns.player_entity end)
 
     assign(socket, other_ships: other_ships)
   end
 
   defp all_ships do
-    xs = XPosition.get_all() |> Enum.sort()
-    ys = YPosition.get_all() |> Enum.sort()
+    for {ship, _hp} <- HullPoints.get_all() do
+      x = XPosition.get_one(ship)
+      y = YPosition.get_one(ship)
+      image = ImageFile.get_one(ship)
+      {ship, x, y, image}
+    end
+  end
 
-    Enum.zip_with(xs, ys, fn {entity, x}, {entity, y} -> {entity, x, y} end)
+  defp assign_projectiles(socket) do
+    projectiles =
+      for projectile <- IsProjectile.get_all() do
+        x = XPosition.get_one(projectile)
+        y = YPosition.get_one(projectile)
+        image = ImageFile.get_one(projectile)
+        {projectile, x, y, image}
+      end
+
+    assign(socket, projectiles: projectiles)
   end
 
   defp assign_offsets(socket) do
@@ -172,15 +193,24 @@ defmodule ShipWeb.GameLive do
             y={@y_coord}
             width="1"
             height="1"
-            href={Routes.static_path(@socket, "/images/player_ship.svg")}
+            href={Routes.static_path(@socket, "/images/" <> @player_ship_image_file)}
           />
-          <%= for {_entity, x, y} <- @other_ships do %>
+          <%= for {_entity, x, y, image_file} <- @other_ships do %>
             <image
               x={x}
               y={y}
               width="1"
               height="1"
-              href={Routes.static_path(@socket, "/images/other_ship.svg")}
+              href={Routes.static_path(@socket, "/images/" <> image_file)}
+            />
+          <% end %>
+          <%= for {_, x, y, image_file} <- @projectiles do %>
+            <image
+              x={x}
+              y={y}
+              width="1"
+              height="1"
+              href={Routes.static_path(@socket, "/images/" <> image_file)}
             />
           <% end %>
           <text x={@x_offset} y={@y_offset + 1} style="font: 1px serif">

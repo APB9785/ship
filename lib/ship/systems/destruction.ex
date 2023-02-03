@@ -10,6 +10,7 @@ defmodule Ship.Systems.Destruction do
   alias Ship.Components.AttackTarget
   alias Ship.Components.DestroyedAt
   alias Ship.Components.HullPoints
+  alias Ship.Components.ProjectileTarget
   alias Ship.Components.SeekingTarget
   alias Ship.Components.XPosition
   alias Ship.Components.XVelocity
@@ -38,16 +39,20 @@ defmodule Ship.Systems.Destruction do
     YPosition.remove(entity)
     YVelocity.remove(entity)
 
-    # when a ship is destroyed, other ships should stop targeting it
+    # when a ship is destroyed, other entities should stop targeting it
     untarget(entity)
 
     DestroyedAt.add(entity, DateTime.utc_now())
   end
 
   defp untarget(target) do
-    for entity <- AttackTarget.search(target) do
-      AttackTarget.remove(entity)
-      SeekingTarget.add(entity)
+    for ship <- AttackTarget.search(target) do
+      AttackTarget.remove(ship)
+      SeekingTarget.add(ship)
+    end
+
+    for projectile <- ProjectileTarget.search(target) do
+      ProjectileTarget.remove(projectile)
     end
   end
 end

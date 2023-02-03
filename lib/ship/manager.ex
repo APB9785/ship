@@ -5,7 +5,7 @@ defmodule Ship.Manager do
   use ECSx.Manager, tick_rate: 20
 
   setup do
-    for _player_count <- 1..44 do
+    for _ships <- 1..40 do
       # First generate a unique ID to represent the new entity
       entity = Ecto.UUID.generate()
 
@@ -18,12 +18,17 @@ defmodule Ship.Manager do
       Ship.Components.SeekingTarget.add(entity)
       Ship.Components.XPosition.add(entity, Enum.random(1..100))
       Ship.Components.YPosition.add(entity, Enum.random(1..100))
+      Ship.Components.ImageFile.add(entity, "npc_ship.svg")
     end
   end
 
   # Declare all valid Component types
   def components do
     [
+      Ship.Components.ImageFile,
+      Ship.Components.IsProjectile,
+      Ship.Components.ProjectileDamage,
+      Ship.Components.ProjectileTarget,
       Ship.Components.PlayerSpawned,
       Ship.Components.DestroyedAt,
       Ship.Components.AttackCooldown,
@@ -44,6 +49,7 @@ defmodule Ship.Manager do
   # Declare all Systems to run
   def systems do
     [
+      Ship.Systems.Projectile,
       Ship.Systems.ClientEventHandler,
       Ship.Systems.Destruction,
       Ship.Systems.CooldownExpiration,
